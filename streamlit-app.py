@@ -8,6 +8,7 @@ from sklearn.linear_model import ElasticNet, Lasso, LogisticRegression, PassiveA
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import BernoulliNB, GaussianNB, MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 import streamlit as st
@@ -43,7 +44,8 @@ def switch_case(argument):
         "Quadratic Discriminant Analysis (QDA)": QuadraticDiscriminantAnalysis(),
         "XGBoost Classifier": XGBClassifier(),
         "LightGBM Classifier": LGBMClassifier(),
-        "CatBoost Classifier": CatBoostClassifier()
+        "CatBoost Classifier": CatBoostClassifier(),
+        "MLP Classifier": MLPClassifier()
     }
     return switcher.get(argument)
 
@@ -61,7 +63,7 @@ def main():
 
         preprocessing(df)
 
-        model_name = st.sidebar.selectbox("Select Machine Learning Model :", ["Random Forest Classifier","SVM","Decision Tree Classifier","Logistic Regression", "Adaboost Classifier","Extra Trees Classifier","Gradient Boosting Classifier","K-Nearest Neighbors Classifier", "Gaussian Naive Bayes Classifier"])
+        model_name = st.sidebar.selectbox("Select Machine Learning Model :", ["Random Forest Classifier","SVM","Decision Tree Classifier","Logistic Regression", "Adaboost Classifier","Extra Trees Classifier","Gradient Boosting Classifier","K-Nearest Neighbors Classifier", "Gaussian Naive Bayes Classifier", "Bernoulli Naive Bayes Classifier", "Multinomial Naive Bayes Classifier", "Passive Aggressive Classifier", "Ridge Classifier", "Lasso Classifier", "ElasticNet Classifier", "Bagging Classifier", "Stochastic Gradient Descent Classifier", "Perceptron", "Isolation Forest", "Principal Component Analysis (PCA)", "Linear Discriminant Analysis (LDA)", "Quadratic Discriminant Analysis (QDA)", "XGBoost Classifier", "LightGBM Classifier", "CatBoost Classifier", "MLP Classifier"])
         model = switch_case(model_name)
         run_model(df, model)
 
