@@ -267,7 +267,7 @@ pytorch-metric-learning==1.7.3
 pyttsx3==2.90
 pytweening==1.2.0
 pytz==2023.3
-PyWavelets==1.5.0
+# PyWavelets==1.5.0
 pywin32==306
 PyYAML==6.0.1
 pyzmq==25.1.2
