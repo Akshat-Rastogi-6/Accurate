@@ -8,7 +8,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticD
 from sklearn.ensemble import AdaBoostClassifier, BaggingClassifier, GradientBoostingClassifier, IsolationForest, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import ElasticNet, Lasso, LogisticRegression, PassiveAggressiveClassifier, Perceptron, RidgeClassifier, SGDClassifier
-from sklearn.model_selection import train_test_split, validation_curve
+from sklearn.model_selection import train_test_split
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.naive_bayes import BernoulliNB, GaussianNB, MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
@@ -97,11 +97,10 @@ def run_model(df, model, model_name):
             st.write("Accuracy:", float(accuracy))
 
             if accuracy != "" :
-                if st.button("Confusion Matrix") :
+                curves = st.sidebar.selectbox("Select the metrics you want to see : ", ["Confusion Matrix", "ROC Curve"])
+                if curves == "Confusion Matrix":
                     cm(y_test, y_pred)
-                if st.button("ROC Curve"):
-                    model_1=OneVsRestClassifier(model)
-                    model_1.fit(X_train, y_train)
+                if curves == "ROC Curve" :
                     aoc(y_test, y_pred)
 
                 
