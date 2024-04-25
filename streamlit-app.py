@@ -6,6 +6,7 @@ from sklearn.calibration import LabelEncoder
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from sklearn.ensemble import AdaBoostClassifier, BaggingClassifier, GradientBoostingClassifier, IsolationForest, RandomForestClassifier
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import ElasticNet, Lasso, LogisticRegression, PassiveAggressiveClassifier, Perceptron, RidgeClassifier, SGDClassifier
 from sklearn.model_selection import train_test_split, validation_curve
 from sklearn.multiclass import OneVsRestClassifier
@@ -17,7 +18,7 @@ from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, auc, confusion_matrix, roc_curve
 from xgboost import XGBClassifier
 
 # --server.enableXsrfProtection false
@@ -69,7 +70,8 @@ def pre_processing(df):
             # Fit label encoder and transform the column
             df[column] = encoder.fit_transform(df[column])
 
-    df = df.fillna(df.mean())
+    imputer = SimpleImputer(strategy='mean')
+    df = imputer.fit_transform(df)
     
 
 def run_model(df, model, model_name):
@@ -100,12 +102,24 @@ def run_model(df, model, model_name):
                 if st.button("ROC Curve"):
                     model_1=OneVsRestClassifier(model)
                     model_1.fit(X_train, y_train)
-                    model_1pred_prob= model_1.predict_proba(X_test)
-                    st.write(model_1pred_prob)
-                    aoc(model_1pred_prob)
+                    aoc(y_test, y_pred)
 
                 
+def aoc(y_test, y_pred):
+    fpr, tpr, _ = roc_curve(y_test, y_pred)
+    roc_auc = auc(fpr, tpr)
 
+    plt.figure()
+    plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.legend(loc="lower right")
+    plt.savefig('uploads/roc.jpg', format="jpg", dpi=300)
+    st.image("uploads/roc.jpg", caption="Confusion Matrix of your Data", width=600)
 
 def main():
     st.title("Accurate 🎯")
