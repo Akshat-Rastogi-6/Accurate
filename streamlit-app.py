@@ -22,6 +22,8 @@ from sklearn.metrics import accuracy_score, auc, confusion_matrix, roc_curve
 from xgboost import XGBClassifier
 
 # --server.enableXsrfProtection false
+
+# This function helps you to choose between various different machine learning models.
 def switch_case(argument):
     switcher = {
         "Random Forest Classifier": RandomForestClassifier(),
@@ -53,14 +55,15 @@ def switch_case(argument):
     }
     return switcher.get(argument)
 
-
+# This function helps you generate a confusion matrix for your selected model
 def cm(y_test, y_pred):
     mdl_cm=confusion_matrix(y_test, y_pred)
     plt.figure(figsize = (13,12))
     sns.heatmap(mdl_cm, annot=True)
     plt.savefig('uploads/confusion_matrix.jpg', format="jpg", dpi=300)
-    st.image("uploads/confusion_matrix.jpg", caption="Confusion Matrix of your Data", width=600)
-
+    st.image("uploads/confusion_matrix.jpg", caption="Confusion Matrix of your Data", width=600)\
+    
+# All the pre-processing like removing null values, label encoding is done here
 def pre_processing(df):
     encoder = LabelEncoder()
     # Iterate through each column in the dataframe
@@ -72,8 +75,10 @@ def pre_processing(df):
 
     imputer = SimpleImputer(strategy='mean')
     df = imputer.fit_transform(df)
-    
 
+    return df
+    
+# This function does the data splitting and applies ML
 def run_model(df, model, model_name):
     st.subheader(model_name)
     
@@ -103,7 +108,7 @@ def run_model(df, model, model_name):
                 if curves == "ROC Curve" :
                     aoc(y_test, y_pred)
 
-                
+# This function is for getting the ROC score of the data    
 def aoc(y_test, y_pred):
     fpr, tpr, _ = roc_curve(y_test, y_pred)
     roc_auc = auc(fpr, tpr)
@@ -120,6 +125,7 @@ def aoc(y_test, y_pred):
     plt.savefig('uploads/roc.jpg', format="jpg", dpi=300)
     st.image("uploads/roc.jpg", caption="Confusion Matrix of your Data", width=600)
 
+# This is the main function
 def main():
     st.title("Accurate 🎯")
     upload_file = st.file_uploader("Upload your CSV file...", type=['csv'])
@@ -131,7 +137,10 @@ def main():
         st.write('**DataFrame from Uploaded CSV File:**')
         st.write(df.head())
 
-        pre_processing(df)
+        columns = df.columns
+        df = pre_processing(df)
+
+        df = pd.DataFrame(df, columns=columns)
 
         model_name = st.sidebar.selectbox("Select Machine Learning Model :", ["Random Forest Classifier","SVM","Decision Tree Classifier","Logistic Regression", "Adaboost Classifier","Extra Trees Classifier","Gradient Boosting Classifier","K-Nearest Neighbors Classifier", "Gaussian Naive Bayes Classifier", "Bernoulli Naive Bayes Classifier", "Multinomial Naive Bayes Classifier", "Passive Aggressive Classifier", "Ridge Classifier", "Lasso Classifier", "ElasticNet Classifier", "Bagging Classifier", "Stochastic Gradient Descent Classifier", "Perceptron", "Isolation Forest", "Principal Component Analysis (PCA)", "Linear Discriminant Analysis (LDA)", "Quadratic Discriminant Analysis (QDA)", "XGBoost Classifier", "LightGBM Classifier", "CatBoost Classifier", "MLP Classifier"])
 
@@ -140,6 +149,8 @@ def main():
 
 
         st.write("Do you want to do Feature Engineering to make the results better.")
+        st.button("Yes")
+        st.button("No")
 
 
 main()
