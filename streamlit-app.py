@@ -18,7 +18,7 @@ from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.metrics import accuracy_score, auc, confusion_matrix, roc_curve
+from sklearn.metrics import accuracy_score, auc, cohen_kappa_score, confusion_matrix, f1_score, log_loss, matthews_corrcoef, precision_score, recall_score, roc_auc_score, roc_curve
 from xgboost import XGBClassifier
 
 # --server.enableXsrfProtection false
@@ -64,7 +64,7 @@ def cm(y_test, y_pred):
     st.image("uploads/confusion_matrix.jpg", caption="Confusion Matrix of your Data", width=600)\
     
 # All the pre-processing like removing null values, label encoding is done here
-def pre_processing(df):
+def pre_processing(df, columns):
     encoder = LabelEncoder()
     # Iterate through each column in the dataframe
     for column in df.columns:
@@ -75,6 +75,17 @@ def pre_processing(df):
 
     imputer = SimpleImputer(strategy='mean')
     df = imputer.fit_transform(df)
+
+    # WILL DO THIS LATER 
+
+    # st.write("Do you want to do Feature Engineering to make the results better.")
+    # if st.button("Yes") :
+    #     st.write("Choose the elements you want to do feature engineering with : ")
+    #     for i in columns :
+    #         st.button(i)
+
+    # if st.button("No") :
+    #     pass
 
     return df
     
@@ -97,11 +108,46 @@ def run_model(df, model, model_name):
             # Make predictions
             y_pred = model.predict(X_test)
 
-            # Display accuracy
-            accuracy = str(accuracy_score(y_test, y_pred))
-            st.write("Accuracy:", float(accuracy))
+            eval_mat = st.sidebar.selectbox("Select your Evaluation Matrix :", ["Accuracy", "Precision", "Recall(Sensitivity)", "F1 Score", "Roc AUC Score", "Confusion Matrix", "Cohen's Kappa", "Matthew's Correlation Coefficient", "Log Loss"])
 
-            if accuracy != "" :
+            if eval_mat == "Accuracy" :
+                # Display accuracy
+                result = str(accuracy_score(y_test, y_pred))
+                st.write("Accuracy :", float(result))
+
+            if eval_mat == "Precision":
+                result = str(precision_score(y_test, y_pred))
+                st.write("Precision:", float(result))
+
+            if eval_mat == "Recall(Sensitivity)":
+                result = str(recall_score(y_test, y_pred))
+                st.write("Recall(Sensitivity)c:", float(result))
+
+            if eval_mat == "F1 Score":
+                result = str(f1_score(y_test, y_pred))
+                st.write("F1 Score :", float(result))
+            
+            if eval_mat == "Roc AUC Score":
+                result = str(roc_auc_score(y_test, y_pred))
+                st.write("Roc AUC Score :", float(result))
+                
+            if eval_mat == "Confusion Matrix":
+                result = str(confusion_matrix(y_test, y_pred))
+                st.write("Confusion Matrix :", float(result))
+
+            if eval_mat == "Cohen's Kappa":
+                result = str(cohen_kappa_score(y_test, y_pred))
+                st.write("Cohen's Kappa :", float(result))
+
+            if eval_mat == "Matthew's Correlation Coefficient":
+                result = str(matthews_corrcoef(y_test, y_pred))
+                st.write("Matthew's Correlation Coefficient :", float(result))
+
+            if eval_mat == "Log Loss":
+                result = str(log_loss(y_test, y_pred))
+                st.write("Log Loss :", float(result))
+
+            if result != "" :
                 curves = st.sidebar.selectbox("Select the metrics you want to see : ", ["Confusion Matrix", "ROC Curve"])
                 if curves == "Confusion Matrix":
                     cm(y_test, y_pred)
@@ -138,7 +184,7 @@ def main():
         st.write(df.head())
 
         columns = df.columns
-        df = pre_processing(df)
+        df = pre_processing(df, columns)
 
         df = pd.DataFrame(df, columns=columns)
 
@@ -146,12 +192,6 @@ def main():
 
         model = switch_case(model_name)
         run_model(df, model, model_name)
-
-
-        st.write("Do you want to do Feature Engineering to make the results better.")
-        st.button("Yes")
-        st.button("No")
-
 
 main()
 
