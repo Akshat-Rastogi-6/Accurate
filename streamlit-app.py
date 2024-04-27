@@ -108,7 +108,7 @@ def run_model(df, model, model_name):
             # Make predictions
             y_pred = model.predict(X_test)
 
-            eval_mat = st.sidebar.selectbox("Select your Evaluation Matrix :", ["Accuracy", "Precision", "Recall(Sensitivity)", "F1 Score", "Roc AUC Score", "Confusion Matrix", "Cohen's Kappa", "Matthew's Correlation Coefficient", "Log Loss"])
+            eval_mat = st.sidebar.selectbox("Select your Evaluation Matrix :", ["Accuracy", "Precision", "Recall(Sensitivity)", "F1 Score", "Roc AUC Score", "Cohen's Kappa", "Matthew's Correlation Coefficient", "Log Loss"])
 
             if eval_mat == "Accuracy" :
                 # Display accuracy
@@ -131,9 +131,9 @@ def run_model(df, model, model_name):
                 result = str(roc_auc_score(y_test, y_pred))
                 st.write("Roc AUC Score :", float(result))
                 
-            if eval_mat == "Confusion Matrix":
-                result = str(confusion_matrix(y_test, y_pred))
-                st.write("Confusion Matrix :", float(result))
+            # if eval_mat == "Confusion Matrix":
+            #     result = str(confusion_matrix(y_test, y_pred))
+            #     st.write("Confusion Matrix :", float(result))
 
             if eval_mat == "Cohen's Kappa":
                 result = str(cohen_kappa_score(y_test, y_pred))
