@@ -106,8 +106,19 @@ def run_model(df, model, model_name):
             model.fit(X_train, y_train)
 
             # Make predictions
-            y_pred = model.predict(X_test)
+            
+            testing_file = st.sidebar.file_uploader("Upload your testing CSV file...", type=['csv'])
+            if testing_file is not None:
+                test = pd.read_csv(testing_file)
+                test_columns = test.columns
 
+                test = pre_processing(test, test_columns)
+                test = pd.DataFrame(df, columns=test_columns)
+
+                y_pred = model.predict(test)
+
+            y_pred = model.predict(X_test) #this line tests your data for code from the dataset.
+            
             eval_mat = st.sidebar.selectbox("Select your Evaluation Matrix :", ["Accuracy", "Precision", "Recall(Sensitivity)", "F1 Score", "Roc AUC Score", "Cohen's Kappa", "Matthew's Correlation Coefficient", "Log Loss"])
 
             if eval_mat == "Accuracy" :
