@@ -108,6 +108,7 @@ def run_model(df, model, model_name):
             # Make predictions
             
             testing_file = st.sidebar.file_uploader("Upload your testing CSV file...", type=['csv'])
+
             if testing_file is not None:
                 test = pd.read_csv(testing_file)
                 test_columns = test.columns
@@ -127,15 +128,15 @@ def run_model(df, model, model_name):
                 st.write("Accuracy :", float(result))
 
             if eval_mat == "Precision":
-                result = str(precision_score(y_test, y_pred))
+                result = str(precision_score(y_test, y_pred, average='weighted'))
                 st.write("Precision:", float(result))
 
             if eval_mat == "Recall(Sensitivity)":
-                result = str(recall_score(y_test, y_pred))
+                result = str(recall_score(y_test, y_pred, average='weighted'))
                 st.write("Recall(Sensitivity)c:", float(result))
 
             if eval_mat == "F1 Score":
-                result = str(f1_score(y_test, y_pred))
+                result = str(f1_score(y_test, y_pred, average='weighted'))
                 st.write("F1 Score :", float(result))
             
             if eval_mat == "Roc AUC Score":
