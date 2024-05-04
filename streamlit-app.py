@@ -2,7 +2,7 @@ from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
 from matplotlib import pyplot as plt
 import seaborn as sns
-from sklearn.calibration import LabelEncoder
+from sklearn.calibration import LabelEncoder, label_binarize
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from sklearn.ensemble import AdaBoostClassifier, BaggingClassifier, GradientBoostingClassifier, IsolationForest, RandomForestClassifier
@@ -164,24 +164,44 @@ def run_model(df, model, model_name):
                 if curves == "Confusion Matrix":
                     cm(y_test, y_pred)
                 if curves == "ROC Curve" :
-                    aoc(y_test, y_pred)
+                    y_arr = np.array(y)
+                    unique_classes, counts = np.unique(y_arr, return_counts=True)
+                    n_classes = len(unique_classes)
+                    y_train_bin = label_binarize(y_train, classes=range(n_classes))
+                    # Train the classifier
+                    classifier = OneVsRestClassifier(model)  # Your chosen classifier
+                    classifier.fit(X_train, y_train_bin)
 
-# This function is for getting the ROC score of the data    
-def aoc(y_test, y_pred):
-    fpr, tpr, _ = roc_curve(y_test, y_pred)
-    roc_auc = auc(fpr, tpr)
+                    # Get predicted probabilities
+                    y_score = classifier.predict_proba(X_test)
+                    aoc(y_score, n_classes, y_test)
 
+
+def aoc(y_score, n_classes, y_test):   
+    y_test_np = y_test.to_numpy() 
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(y_test_np == i, y_score[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    # Plot ROC curves
     plt.figure()
-    plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
-    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+    for i, color in zip(range(n_classes), colors):
+        plt.plot(fpr[i], tpr[i], color=color,
+                label='ROC curve of class {0} (area = {1:0.2f})'
+                ''.format(i, roc_auc[i]))
+    plt.plot([0, 1], [0, 1], 'k--')  # Random guessing line
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.title('ROC Curve for Multiclass Data')
     plt.legend(loc="lower right")
     plt.savefig('uploads/roc.jpg', format="jpg", dpi=300)
-    st.image("uploads/roc.jpg", caption="Confusion Matrix of your Data", width=600)
+    st.image("uploads/roc.jpg", caption="ROC of your Data", width=600)\
 
 # This is the main function
 def main():
