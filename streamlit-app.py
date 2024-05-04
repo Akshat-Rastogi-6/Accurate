@@ -18,7 +18,7 @@ from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.metrics import accuracy_score, auc, cohen_kappa_score, confusion_matrix, f1_score, log_loss, matthews_corrcoef, precision_score, recall_score, roc_auc_score, roc_curve
+from sklearn.metrics import accuracy_score, auc, cohen_kappa_score, confusion_matrix, f1_score, log_loss, matthews_corrcoef, precision_recall_curve, precision_score, recall_score, roc_auc_score, roc_curve
 from xgboost import XGBClassifier
 
 # --server.enableXsrfProtection false
@@ -94,6 +94,7 @@ def run_model(df, model, model_name):
     st.subheader(model_name)
     
     target_column = st.text_input("Enter your target column : ")
+
     # Prepare data
     if target_column != "" :
         X = df.drop(columns=[target_column]) # replace 'target_column' with the name of your target column
@@ -201,7 +202,17 @@ def aoc(y_score, n_classes, y_test):
     plt.title('ROC Curve for Multiclass Data')
     plt.legend(loc="lower right")
     plt.savefig('uploads/roc.jpg', format="jpg", dpi=300)
-    st.image("uploads/roc.jpg", caption="ROC of your Data", width=600)\
+    st.image("uploads/roc.jpg", caption="ROC of your Data", width=600)
+
+# def visualization():
+#     precision, recall, _ = precision_recall_curve(y_true, y_score)
+#     plt.plot(recall, precision, marker='.')
+#     plt.xlabel('Recall')
+#     plt.ylabel('Precision')
+#     plt.title('Precision-Recall Curve')
+#     plt.show()
+
+
 
 # This is the main function
 def main():
@@ -215,6 +226,8 @@ def main():
         st.write('**DataFrame from Uploaded CSV File:**')
         st.write(df.head())
 
+        # visualization()
+
         columns = df.columns
         df = pre_processing(df, columns)
 
@@ -224,6 +237,8 @@ def main():
 
         model = switch_case(model_name)
         run_model(df, model, model_name)
+
+        st.sidebar.button("Print out Dataset Details.")
 
 main()
 
