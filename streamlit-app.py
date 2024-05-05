@@ -77,16 +77,6 @@ def pre_processing(df, columns):
     df = imputer.fit_transform(df)
 
     # WILL DO THIS LATER 
-
-    # st.write("Do you want to do Feature Engineering to make the results better.")
-    # if st.button("Yes") :
-    #     st.write("Choose the elements you want to do feature engineering with : ")
-    #     for i in columns :
-    #         st.button(i)
-
-    # if st.button("No") :
-    #     pass
-
     return df
     
 # This function does the data splitting and applies ML
@@ -224,8 +214,7 @@ def main():
         df = pd.read_csv(upload_file)
         # Display the DataFrame
         st.write('**DataFrame from Uploaded CSV File:**')
-        st.write(df.head())
-
+        st.dataframe(df.head())
         # visualization()
 
         columns = df.columns
@@ -238,7 +227,7 @@ def main():
         model = switch_case(model_name)
         run_model(df, model, model_name)
 
-        st.sidebar.button("Print out Dataset Details.")
+        # st.sidebar.button("Print out Dataset Details.")
 
 main()
 
