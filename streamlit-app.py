@@ -227,7 +227,7 @@ def main():
         model = switch_case(model_name)
         run_model(df, model, model_name)
 
-        # st.sidebar.button("Print out Dataset Details.")
+        # st.sidebar.button("Print out Dataset Details.") 
 
 main()
 
