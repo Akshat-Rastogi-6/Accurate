@@ -1,1 +1,35 @@
-requirements__.txt
+# Python virtual environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+accurate-key-pair.pem
+*.pem
+*.key
+
+# Generated files
+logs/
+saved_models/
+uploads/
+build.log
+*.log
+
+# Environment
+.env
+.env.production
+.env.local

@@ -1,0 +1,27 @@
+[app]
+title = "Accurate"
+version = "2.0.0"
+debug = false
+supported_formats = ["csv", "xlsx", "json"]
+
+[models]
+save_models = true
+default_test_size = 0.2
+cross_validation_folds = 5
+max_models_parallel = 2
+
+[logging]
+level = "INFO"
+format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+filename = "logs/accurate.log"
+max_bytes = 10485760
+backup_count = 3
+
+[preprocessing]
+max_categorical_cardinality = 50
+numerical_threshold = 0.05
+missing_threshold = 0.5
+
+[security]
+max_file_size_mb = 50
+allowed_extensions = ["csv", "xlsx", "json"]
