@@ -97,45 +97,21 @@ class AccurateApp:
             # App information
             st.info(f"**Version:** {config.get('app.version', '2.0.0')}")
             
-            # Model selection (if data is available)
-            if st.session_state.data_uploaded:
-                st.subheader("🤖 Choose AI Models")
+            # Help section
+            with st.expander("ℹ️ Need Help?"):
+                st.markdown("""
+                **How to use Accurate:**
+                1. 📤 Upload your data file
+                2. 📊 Explore your data with visualizations
+                3. 🔧 Preprocess and engineer features
+                4. 🤖 Select and train ML models
+                5. 📈 Evaluate and compare results
                 
-                # Model category filter
-                categories = ["All"] + list(model_registry.model_categories.keys())
-                selected_category = st.selectbox("Model Type", categories)
-                
-                # Get available models
-                if selected_category == "All":
-                    available_models = model_registry.get_all_models()
-                else:
-                    available_models = model_registry.get_models_by_category(selected_category)
-                
-                # Model selection
-                selected_models = st.multiselect(
-                    "Select Models to Try",
-                    available_models,
-                    default=available_models[:3] if len(available_models) >= 3 else available_models,
-                    help="Pick multiple models to compare their performance"
-                )
-                
-                st.session_state.selected_models = selected_models
-                
-                # Advanced options
-                with st.expander("⚙️ More Options"):
-                    st.session_state.test_size = st.slider(
-                        "Test data size", 0.1, 0.5, 
-                        config.get('models.default_test_size', 0.2), 0.05
-                    )
-                    
-                    st.session_state.cross_validate = st.checkbox(
-                        "Use Cross-Validation", True
-                    )
-                    
-                    st.session_state.save_models = st.checkbox(
-                        "Save Trained Models", 
-                        config.get('models.save_models', True)
-                    )
+                **Supported file formats:**
+                - CSV files (.csv)
+                - Excel files (.xlsx)
+                - JSON files (.json)
+                """)
             
             # Reset button
             if st.button("🔄 Start New Analysis"):
@@ -376,8 +352,8 @@ class AccurateApp:
             st.info("👆 Please upload data in the Data Ingestion tab first.")
     
     def _render_data_preprocessing_tab(self):
-        """Render data preprocessing tab."""
-        st.header("🔧 Data Preprocessing")
+        """Render advanced data preprocessing tab."""
+        st.header("🔧 Advanced Data Preprocessing & Engineering")
         
         if not st.session_state.get('data_validated', False):
             st.warning("⚠️ Please select a target column in the Data Ingestion tab first!")
@@ -388,96 +364,582 @@ class AccurateApp:
             self.data = st.session_state.data
             
             st.markdown("""
-            Configure how to prepare your data for machine learning models.
+            Configure comprehensive data preprocessing and feature engineering for optimal model performance.
+            Choose between **Quick Mode** (automated) or **Custom Mode** (column-by-column control).
             """)
             
-            # Preprocessing configuration
-            st.subheader("⚙️ Preprocessing Configuration")
+            # Preprocessing mode selection
+            preprocessing_mode = st.radio(
+                "Select Preprocessing Mode:",
+                ["🚀 Quick Mode (Auto-Optimize)", "🎛️ Custom Mode (Advanced Control)"],
+                help="Quick mode applies intelligent defaults. Custom mode gives you full control over each column."
+            )
             
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                missing_strategy = st.selectbox(
-                    "Missing values strategy",
-                    ["auto", "drop", "mean_mode", "knn"],
-                    help="How to handle missing data"
-                )
-                
-                encoding_strategy = st.selectbox(
-                    "Categorical encoding",
-                    ["auto", "label", "onehot", "mixed"],
-                    help="How to convert text to numbers"
-                )
-            
-            with col2:
-                scaling_strategy = st.selectbox(
-                    "Numerical scaling",
-                    ["standard", "minmax", "robust", "none"],
-                    help="How to scale numerical features"
-                )
-                
-                test_size = st.slider(
-                    "Test set size",
-                    0.1, 0.5, st.session_state.get('test_size', 0.2), 0.05
-                )
-            
-            # Run preprocessing
-            if st.button("🔧 Preprocess Data", type="primary"):
-                try:
-                    with st.spinner("Preprocessing data..."):
-                        preprocessing_options = {
-                            'missing_strategy': missing_strategy,
-                            'encoding_strategy': encoding_strategy,
-                            'scaling_strategy': scaling_strategy
-                        }
-                        
-                        X_train, X_test, y_train, y_test, preprocessing_info = preprocessor.preprocess_data(
-                            self.data,
-                            st.session_state.target_column,
-                            test_size=test_size,
-                            preprocessing_options=preprocessing_options
-                        )
-                        
-                        # Store in session state
-                        st.session_state.X_train = X_train
-                        st.session_state.X_test = X_test
-                        st.session_state.y_train = y_train
-                        st.session_state.y_test = y_test
-                        st.session_state.preprocessing_info = preprocessing_info
-                        st.session_state.data_preprocessed = True
-                        
-                        st.success("✅ Preprocessing completed!")
-                        
-                        # Display summary
-                        st.subheader("📋 Preprocessing Summary")
-                        
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("Original Shape", f"{preprocessing_info['original_shape'][0]}×{preprocessing_info['original_shape'][1]}")
-                        with col2:
-                            st.metric("Final Shape", f"{preprocessing_info['final_shape'][0]}×{preprocessing_info['final_shape'][1]}")
-                        with col3:
-                            st.metric("Test Size", f"{test_size:.1%}")
-                        
-                        # Show steps
-                        st.subheader("🔄 Applied Transformations")
-                        for i, step in enumerate(preprocessing_info['preprocessing_steps'], 1):
-                            st.write(f"{i}. {step}")
-                        
-                        # Task type
-                        is_classification = preprocessing_info['target_info']['is_classification']
-                        task_type = "Classification" if is_classification else "Regression"
-                        st.info(f"🎯 **Task Type:** {task_type}")
-                        
-                except Exception as e:
-                    st.error(f"❌ Preprocessing failed: {str(e)}")
-                    logger.error(f"Preprocessing error: {str(e)}")
+            if preprocessing_mode == "🚀 Quick Mode (Auto-Optimize)":
+                self._render_quick_preprocessing_mode()
+            else:
+                self._render_custom_preprocessing_mode()
             
             # Show current status
             if st.session_state.get('data_preprocessed', False):
                 st.success("✅ Data is preprocessed and ready for model training!")
         else:
             st.info("👆 Please upload data first.")
+    
+    def _render_quick_preprocessing_mode(self):
+        """Render quick preprocessing mode with auto-optimization."""
+        st.subheader("🚀 Quick Mode - Automated Optimization")
+        
+        st.info("💡 We'll analyze your data and apply the best preprocessing techniques automatically.")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            missing_strategy = st.selectbox(
+                "Missing values",
+                ["auto", "drop", "mean", "median", "mode", "knn", "interpolate"],
+                help="Auto: Smart detection based on data type and distribution"
+            )
+        
+        with col2:
+            scaling_strategy = st.selectbox(
+                "Feature scaling",
+                ["standard", "minmax", "robust", "maxabs", "none"],
+                help="Standard: Z-score, MinMax: 0-1, Robust: resistant to outliers"
+            )
+        
+        with col3:
+            test_size = st.slider(
+                "Test set size",
+                0.1, 0.5, st.session_state.get('test_size', 0.2), 0.05
+            )
+        
+        # Advanced options
+        with st.expander("⚙️ Advanced Options"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                handle_outliers = st.checkbox("Remove outliers", value=False, help="Remove extreme values using IQR method")
+                apply_pca = st.checkbox("Apply PCA", value=False, help="Reduce dimensions while preserving variance")
+                if apply_pca:
+                    pca_variance = st.slider("PCA variance to keep", 0.8, 0.99, 0.95, 0.01)
+            
+            with col2:
+                balance_classes = st.checkbox("Balance classes", value=False, help="For classification: handle imbalanced datasets")
+                feature_selection = st.checkbox("Auto feature selection", value=False, help="Keep only important features")
+                if feature_selection:
+                    n_features = st.slider("Max features to keep", 5, 50, 20)
+        
+        # Run preprocessing
+        if st.button("🚀 Auto-Preprocess Data", type="primary", key="quick_preprocess"):
+            self._execute_quick_preprocessing(
+                missing_strategy, scaling_strategy, test_size,
+                handle_outliers, apply_pca, balance_classes, feature_selection,
+                pca_variance if apply_pca else 0.95,
+                n_features if feature_selection else 20
+            )
+    
+    def _render_custom_preprocessing_mode(self):
+        """Render custom preprocessing mode with column-by-column control."""
+        st.subheader("🎛️ Custom Mode - Column-by-Column Control")
+        
+        # Analyze data and provide suggestions
+        target_col = st.session_state.target_column
+        features = [col for col in self.data.columns if col != target_col]
+        
+        st.markdown("### 📊 Column Analysis & Recommendations")
+        
+        # Initialize preprocessing config in session state
+        if 'custom_preprocessing_config' not in st.session_state:
+            st.session_state.custom_preprocessing_config = {}
+        
+        # Analyze each column and suggest preprocessing
+        column_configs = {}
+        
+        for col in features:
+            with st.expander(f"🔧 {col} - {self.data[col].dtype}", expanded=False):
+                col_data = self.data[col]
+                col_type = col_data.dtype
+                
+                # Display column statistics
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Non-null", f"{col_data.count()}/{len(col_data)}")
+                with col2:
+                    st.metric("Unique", col_data.nunique())
+                with col3:
+                    missing_pct = (col_data.isnull().sum() / len(col_data) * 100)
+                    st.metric("Missing", f"{missing_pct:.1f}%")
+                
+                # Suggest preprocessing based on data type
+                suggestion = self._suggest_preprocessing(col_data, col)
+                st.info(f"💡 **Suggestion:** {suggestion}")
+                
+                # Configuration for this column
+                config = {}
+                
+                # Handle missing values
+                if col_data.isnull().sum() > 0:
+                    st.markdown("**Missing Values:**")
+                    if col_type in ['int64', 'float64']:
+                        config['missing'] = st.selectbox(
+                            "Handle missing",
+                            ["mean", "median", "mode", "forward_fill", "backward_fill", "interpolate", "constant", "drop"],
+                            key=f"missing_{col}"
+                        )
+                        if config['missing'] == 'constant':
+                            config['fill_value'] = st.number_input(f"Fill value for {col}", value=0.0, key=f"fill_{col}")
+                    else:
+                        config['missing'] = st.selectbox(
+                            "Handle missing",
+                            ["mode", "constant", "drop"],
+                            key=f"missing_{col}"
+                        )
+                        if config['missing'] == 'constant':
+                            config['fill_value'] = st.text_input(f"Fill value for {col}", value="Unknown", key=f"fill_{col}")
+                
+                # Type-specific preprocessing
+                if col_type in ['int64', 'float64']:
+                    st.markdown("**Numerical Preprocessing:**")
+                    
+                    # Check for potential binning (age, price ranges, etc.)
+                    if self._is_binnable_column(col, col_data):
+                        apply_binning = st.checkbox(f"Apply binning/grouping", value=False, key=f"bin_{col}")
+                        if apply_binning:
+                            config['binning'] = st.selectbox(
+                                "Binning method",
+                                ["equal_width", "equal_frequency", "custom"],
+                                key=f"bin_method_{col}"
+                            )
+                            config['n_bins'] = st.slider("Number of bins", 3, 10, 5, key=f"n_bins_{col}")
+                            
+                            if config['binning'] == 'custom':
+                                bins_str = st.text_input(
+                                    "Custom bin edges (comma-separated)",
+                                    value="0,25,50,75,100",
+                                    key=f"custom_bins_{col}"
+                                )
+                                config['custom_bins'] = [float(x.strip()) for x in bins_str.split(',')]
+                    
+                    # Scaling
+                    config['scaling'] = st.selectbox(
+                        "Scaling method",
+                        ["none", "standard", "minmax", "robust", "maxabs", "log", "sqrt", "power"],
+                        key=f"scale_{col}",
+                        help="Standard: Z-score, MinMax: 0-1, Robust: IQR-based, Log: log(x+1)"
+                    )
+                    
+                    if config.get('scaling') == 'power':
+                        config['power_lambda'] = st.slider("Power lambda", -2.0, 2.0, 1.0, 0.1, key=f"power_{col}")
+                    
+                    # Outlier handling
+                    config['outliers'] = st.selectbox(
+                        "Outlier handling",
+                        ["none", "clip", "remove", "winsorize"],
+                        key=f"outlier_{col}",
+                        help="Clip: Cap at percentiles, Remove: Drop rows, Winsorize: Replace extremes"
+                    )
+                    
+                    if config['outliers'] != 'none':
+                        config['outlier_threshold'] = st.slider(
+                            "Outlier threshold (IQR multiplier)",
+                            1.0, 3.0, 1.5, 0.1,
+                            key=f"outlier_thresh_{col}"
+                        )
+                
+                elif col_type == 'object' or col_type.name == 'category':
+                    st.markdown("**Categorical Preprocessing:**")
+                    
+                    unique_count = col_data.nunique()
+                    
+                    # Encoding method
+                    if unique_count == 2:
+                        config['encoding'] = st.selectbox(
+                            "Encoding method",
+                            ["binary", "label", "onehot"],
+                            index=0,
+                            key=f"encode_{col}",
+                            help="Binary encoding recommended for binary categories"
+                        )
+                    elif unique_count > 10:
+                        config['encoding'] = st.selectbox(
+                            "Encoding method",
+                            ["label", "frequency", "target", "hash", "embeddings"],
+                            index=0,
+                            key=f"encode_{col}",
+                            help="Label/Frequency recommended for high cardinality"
+                        )
+                    else:
+                        config['encoding'] = st.selectbox(
+                            "Encoding method",
+                            ["onehot", "label", "ordinal", "binary", "target"],
+                            index=0,
+                            key=f"encode_{col}",
+                            help="OneHot recommended for low cardinality"
+                        )
+                    
+                    # Handle rare categories
+                    if unique_count > 5:
+                        config['rare_categories'] = st.selectbox(
+                            "Rare categories",
+                            ["keep", "group_as_other", "drop"],
+                            key=f"rare_{col}",
+                            help="Group infrequent categories"
+                        )
+                        if config['rare_categories'] == 'group_as_other':
+                            config['rare_threshold'] = st.slider(
+                                "Frequency threshold (%)",
+                                0.5, 10.0, 5.0, 0.5,
+                                key=f"rare_thresh_{col}"
+                            )
+                    
+                    # Text preprocessing for string columns
+                    if col_type == 'object':
+                        apply_text_processing = st.checkbox("Apply text preprocessing", value=False, key=f"text_{col}")
+                        if apply_text_processing:
+                            config['text_processing'] = st.multiselect(
+                                "Text operations",
+                                ["lowercase", "remove_special_chars", "remove_numbers", "strip_whitespace"],
+                                default=["lowercase", "strip_whitespace"],
+                                key=f"text_ops_{col}"
+                            )
+                
+                # Feature engineering options
+                st.markdown("**Feature Engineering:**")
+                config['feature_engineering'] = st.multiselect(
+                    "Create new features",
+                    ["polynomial", "interaction", "log", "sqrt", "reciprocal"],
+                    key=f"feat_eng_{col}",
+                    help="Generate additional features from this column"
+                )
+                
+                column_configs[col] = config
+        
+        # Global settings
+        st.markdown("### 🌐 Global Settings")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            test_size = st.slider("Test set size", 0.1, 0.5, 0.2, 0.05, key="custom_test_size")
+        with col2:
+            remove_multicollinearity = st.checkbox("Remove multicollinear features", value=False)
+            if remove_multicollinearity:
+                corr_threshold = st.slider("Correlation threshold", 0.7, 0.99, 0.95, 0.01)
+        with col3:
+            normalize_data = st.checkbox("Normalize entire dataset", value=False, help="Apply normalization after all transformations")
+        
+        # Run custom preprocessing
+        if st.button("🔧 Apply Custom Preprocessing", type="primary", key="custom_preprocess"):
+            self._execute_custom_preprocessing(
+                column_configs, test_size,
+                remove_multicollinearity if remove_multicollinearity else False,
+                corr_threshold if remove_multicollinearity else 0.95,
+                normalize_data
+            )
+    
+    def _suggest_preprocessing(self, col_data, col_name):
+        """Suggest preprocessing based on column characteristics."""
+        col_type = col_data.dtype
+        unique_count = col_data.nunique()
+        missing_pct = col_data.isnull().sum() / len(col_data) * 100
+        
+        suggestions = []
+        
+        # Missing value suggestion
+        if missing_pct > 0:
+            if missing_pct > 50:
+                suggestions.append("High missing data - consider dropping")
+            elif col_type in ['int64', 'float64']:
+                if col_data.skew() > 1:
+                    suggestions.append("Use median for missing (skewed data)")
+                else:
+                    suggestions.append("Use mean for missing (normal distribution)")
+            else:
+                suggestions.append("Use mode for missing categorical values")
+        
+        # Type-specific suggestions
+        if col_type in ['int64', 'float64']:
+            # Check if it looks like age, year, etc.
+            if any(keyword in col_name.lower() for keyword in ['age', 'year', 'price', 'salary', 'income']):
+                suggestions.append("Consider binning into ranges")
+            
+            # Check distribution
+            if abs(col_data.skew()) > 1:
+                suggestions.append("Apply log/sqrt transformation (skewed)")
+            
+            # Check for outliers
+            Q1 = col_data.quantile(0.25)
+            Q3 = col_data.quantile(0.75)
+            IQR = Q3 - Q1
+            outliers = ((col_data < (Q1 - 1.5 * IQR)) | (col_data > (Q3 + 1.5 * IQR))).sum()
+            if outliers > 0:
+                suggestions.append(f"Has {outliers} outliers - consider clipping")
+            
+            suggestions.append("Apply standard/robust scaling")
+        
+        elif col_type == 'object':
+            if unique_count == 2:
+                suggestions.append("Binary encoding (2 unique values)")
+            elif unique_count > 10:
+                suggestions.append(f"High cardinality ({unique_count}) - use label/frequency encoding")
+            else:
+                suggestions.append("OneHot encoding (low cardinality)")
+            
+            # Check for rare categories
+            value_counts = col_data.value_counts(normalize=True)
+            rare_categories = (value_counts < 0.05).sum()
+            if rare_categories > 0:
+                suggestions.append(f"Group {rare_categories} rare categories")
+        
+        return " | ".join(suggestions) if suggestions else "No specific recommendations"
+    
+    def _is_binnable_column(self, col_name, col_data):
+        """Check if column is suitable for binning."""
+        keywords = ['age', 'year', 'price', 'salary', 'income', 'score', 'rating', 'amount', 'distance', 'duration']
+        return any(keyword in col_name.lower() for keyword in keywords) or (col_data.nunique() > 20 and col_data.dtype in ['int64', 'float64'])
+    
+    def _execute_quick_preprocessing(self, missing_strategy, scaling_strategy, test_size,
+                                     handle_outliers, apply_pca, balance_classes, feature_selection,
+                                     pca_variance, n_features):
+        """Execute quick preprocessing with auto-optimization."""
+        try:
+            with st.spinner("🚀 Auto-preprocessing your data..."):
+                preprocessing_options = {
+                    'missing_strategy': missing_strategy,
+                    'scaling_strategy': scaling_strategy,
+                    'handle_outliers': handle_outliers,
+                    'apply_pca': apply_pca,
+                    'pca_variance': pca_variance,
+                    'balance_classes': balance_classes,
+                    'feature_selection': feature_selection,
+                    'n_features': n_features
+                }
+                
+                X_train, X_test, y_train, y_test, preprocessing_info = preprocessor.preprocess_data(
+                    self.data,
+                    st.session_state.target_column,
+                    test_size=test_size,
+                    preprocessing_options=preprocessing_options
+                )
+                
+                # Store in session state
+                st.session_state.X_train = X_train
+                st.session_state.X_test = X_test
+                st.session_state.y_train = y_train
+                st.session_state.y_test = y_test
+                st.session_state.preprocessing_info = preprocessing_info
+                st.session_state.data_preprocessed = True
+                
+                st.success("✅ Preprocessing completed successfully!")
+                
+                # Display summary
+                self._display_preprocessing_summary(preprocessing_info, test_size)
+                
+        except Exception as e:
+            st.error(f"❌ Preprocessing failed: {str(e)}")
+            logger.error(f"Quick preprocessing error: {str(e)}")
+            st.info("💡 Try Custom Mode for more control over preprocessing steps.")
+    
+    def _execute_custom_preprocessing(self, column_configs, test_size,
+                                      remove_multicollinearity, corr_threshold, normalize_data):
+        """Execute custom preprocessing with column-specific configurations."""
+        try:
+            with st.spinner("🔧 Applying custom preprocessing..."):
+                # Create a copy of the data
+                processed_data = self.data.copy()
+                target_col = st.session_state.target_column
+                
+                preprocessing_steps = []
+                
+                # Separate target
+                y = processed_data[target_col]
+                X = processed_data.drop(columns=[target_col])
+                
+                # Apply column-specific preprocessing
+                for col, config in column_configs.items():
+                    if col not in X.columns:
+                        continue
+                    
+                    # Handle missing values
+                    if 'missing' in config and X[col].isnull().sum() > 0:
+                        if config['missing'] == 'mean':
+                            X[col].fillna(X[col].mean(), inplace=True)
+                            preprocessing_steps.append(f"{col}: Filled missing with mean")
+                        elif config['missing'] == 'median':
+                            X[col].fillna(X[col].median(), inplace=True)
+                            preprocessing_steps.append(f"{col}: Filled missing with median")
+                        elif config['missing'] == 'mode':
+                            X[col].fillna(X[col].mode()[0], inplace=True)
+                            preprocessing_steps.append(f"{col}: Filled missing with mode")
+                        elif config['missing'] == 'constant':
+                            X[col].fillna(config.get('fill_value', 0), inplace=True)
+                            preprocessing_steps.append(f"{col}: Filled missing with constant")
+                        elif config['missing'] == 'interpolate':
+                            X[col].interpolate(inplace=True)
+                            preprocessing_steps.append(f"{col}: Interpolated missing values")
+                        elif config['missing'] == 'forward_fill':
+                            X[col].fillna(method='ffill', inplace=True)
+                            preprocessing_steps.append(f"{col}: Forward filled missing")
+                        elif config['missing'] == 'backward_fill':
+                            X[col].fillna(method='bfill', inplace=True)
+                            preprocessing_steps.append(f"{col}: Backward filled missing")
+                    
+                    # Numerical preprocessing
+                    if X[col].dtype in ['int64', 'float64']:
+                        # Outlier handling
+                        if config.get('outliers', 'none') != 'none':
+                            Q1 = X[col].quantile(0.25)
+                            Q3 = X[col].quantile(0.75)
+                            IQR = Q3 - Q1
+                            threshold = config.get('outlier_threshold', 1.5)
+                            lower_bound = Q1 - threshold * IQR
+                            upper_bound = Q3 + threshold * IQR
+                            
+                            if config['outliers'] == 'clip':
+                                X[col] = X[col].clip(lower=lower_bound, upper=upper_bound)
+                                preprocessing_steps.append(f"{col}: Clipped outliers")
+                            elif config['outliers'] == 'remove':
+                                mask = (X[col] >= lower_bound) & (X[col] <= upper_bound)
+                                X = X[mask]
+                                y = y[mask]
+                                preprocessing_steps.append(f"{col}: Removed outlier rows")
+                        
+                        # Binning
+                        if 'binning' in config:
+                            if config['binning'] == 'equal_width':
+                                X[f"{col}_binned"] = pd.cut(X[col], bins=config['n_bins'], labels=False)
+                                preprocessing_steps.append(f"{col}: Created equal-width bins")
+                            elif config['binning'] == 'equal_frequency':
+                                X[f"{col}_binned"] = pd.qcut(X[col], q=config['n_bins'], labels=False, duplicates='drop')
+                                preprocessing_steps.append(f"{col}: Created equal-frequency bins")
+                            elif config['binning'] == 'custom':
+                                X[f"{col}_binned"] = pd.cut(X[col], bins=config['custom_bins'], labels=False)
+                                preprocessing_steps.append(f"{col}: Created custom bins")
+                        
+                        # Scaling/Transformation
+                        if config.get('scaling', 'none') != 'none':
+                            from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, MaxAbsScaler
+                            
+                            if config['scaling'] == 'log':
+                                X[col] = np.log1p(X[col])
+                                preprocessing_steps.append(f"{col}: Applied log transformation")
+                            elif config['scaling'] == 'sqrt':
+                                X[col] = np.sqrt(X[col])
+                                preprocessing_steps.append(f"{col}: Applied sqrt transformation")
+                            elif config['scaling'] == 'power':
+                                from sklearn.preprocessing import PowerTransformer
+                                pt = PowerTransformer(method='yeo-johnson')
+                                X[col] = pt.fit_transform(X[[col]])
+                                preprocessing_steps.append(f"{col}: Applied power transformation")
+                    
+                    # Categorical preprocessing
+                    elif X[col].dtype == 'object':
+                        # Text preprocessing
+                        if config.get('text_processing'):
+                            for op in config['text_processing']:
+                                if op == 'lowercase':
+                                    X[col] = X[col].str.lower()
+                                elif op == 'remove_special_chars':
+                                    X[col] = X[col].str.replace(r'[^a-zA-Z0-9\s]', '', regex=True)
+                                elif op == 'remove_numbers':
+                                    X[col] = X[col].str.replace(r'\d+', '', regex=True)
+                                elif op == 'strip_whitespace':
+                                    X[col] = X[col].str.strip()
+                            preprocessing_steps.append(f"{col}: Applied text preprocessing")
+                        
+                        # Handle rare categories
+                        if config.get('rare_categories') == 'group_as_other':
+                            threshold = config.get('rare_threshold', 5) / 100
+                            value_counts = X[col].value_counts(normalize=True)
+                            rare_cats = value_counts[value_counts < threshold].index
+                            X[col] = X[col].replace(rare_cats, 'Other')
+                            preprocessing_steps.append(f"{col}: Grouped rare categories")
+                        
+                        # Encoding
+                        encoding = config.get('encoding', 'label')
+                        if encoding == 'label':
+                            from sklearn.preprocessing import LabelEncoder
+                            le = LabelEncoder()
+                            X[col] = le.fit_transform(X[col].astype(str))
+                            preprocessing_steps.append(f"{col}: Label encoded")
+                        elif encoding == 'onehot':
+                            dummies = pd.get_dummies(X[col], prefix=col)
+                            X = pd.concat([X, dummies], axis=1)
+                            X.drop(columns=[col], inplace=True)
+                            preprocessing_steps.append(f"{col}: OneHot encoded")
+                        elif encoding == 'frequency':
+                            freq = X[col].value_counts(normalize=True)
+                            X[col] = X[col].map(freq)
+                            preprocessing_steps.append(f"{col}: Frequency encoded")
+                
+                # Convert to numpy arrays
+                X_array = X.select_dtypes(include=[np.number]).fillna(0).values
+                y_array = y.values
+                
+                # Handle target encoding if needed
+                if y.dtype == 'object':
+                    from sklearn.preprocessing import LabelEncoder
+                    le = LabelEncoder()
+                    y_array = le.fit_transform(y_array)
+                
+                # Train-test split
+                from sklearn.model_selection import train_test_split
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X_array, y_array, test_size=test_size, random_state=42
+                )
+                
+                # Apply scaling to entire dataset if requested
+                if normalize_data:
+                    from sklearn.preprocessing import StandardScaler
+                    scaler = StandardScaler()
+                    X_train = scaler.fit_transform(X_train)
+                    X_test = scaler.transform(X_test)
+                    preprocessing_steps.append("Applied standard scaling to entire dataset")
+                
+                # Store results
+                st.session_state.X_train = X_train
+                st.session_state.X_test = X_test
+                st.session_state.y_train = y_train
+                st.session_state.y_test = y_test
+                st.session_state.preprocessing_info = {
+                    'original_shape': self.data.shape,
+                    'final_shape': X_array.shape,
+                    'preprocessing_steps': preprocessing_steps,
+                    'target_info': {'is_classification': len(np.unique(y_array)) < 20},
+                    'test_size': test_size
+                }
+                st.session_state.data_preprocessed = True
+                
+                st.success("✅ Custom preprocessing completed!")
+                self._display_preprocessing_summary(st.session_state.preprocessing_info, test_size)
+                
+        except Exception as e:
+            st.error(f"❌ Custom preprocessing failed: {str(e)}")
+            logger.error(f"Custom preprocessing error: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc())
+    
+    def _display_preprocessing_summary(self, preprocessing_info, test_size):
+        """Display preprocessing summary."""
+        st.subheader("📋 Preprocessing Summary")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Original Shape", f"{preprocessing_info['original_shape'][0]}×{preprocessing_info['original_shape'][1]}")
+        with col2:
+            st.metric("Final Shape", f"{preprocessing_info['final_shape'][0]}×{preprocessing_info['final_shape'][1]}")
+        with col3:
+            st.metric("Test Size", f"{test_size:.1%}")
+        
+        # Show steps
+        st.subheader("🔄 Applied Transformations")
+        for i, step in enumerate(preprocessing_info['preprocessing_steps'], 1):
+            st.write(f"{i}. {step}")
+        
+        # Task type
+        is_classification = preprocessing_info['target_info']['is_classification']
+        task_type = "Classification" if is_classification else "Regression"
+        st.info(f"🎯 **Task Type:** {task_type}")
     
     def _render_preprocessed_viz_tab(self):
         """Render preprocessed data visualization tab."""
@@ -535,56 +997,384 @@ class AccurateApp:
         st.dataframe(X_train_df.head(sample_size), use_container_width=True)
     
     def _render_model_training_tab(self):
-        """Render model training tab with hyperparameter tuning."""
+        """Render model training tab with model selection and hyperparameter tuning."""
         st.header("🤖 Model Training & Hyperparameter Tuning")
         
         if not st.session_state.get('data_preprocessed', False):
             st.warning("⚠️ Please preprocess data first!")
             return
         
-        selected_models = st.session_state.get('selected_models', [])
-        
-        if not selected_models:
-            st.warning("🎯 Please select at least one model in the sidebar!")
-            return
-        
-        # Display configuration
-        st.subheader("🎯 Training Configuration")
+        # Dataset info
+        st.subheader("📊 Dataset Information")
         col1, col2, col3 = st.columns(3)
-        
         with col1:
-            st.metric("Models Selected", len(selected_models))
-        with col2:
             st.metric("Training Samples", f"{len(st.session_state.X_train):,}")
+        with col2:
+            st.metric("Test Samples", f"{len(st.session_state.X_test):,}")
         with col3:
-            st.metric("Cross-Validation", "Yes" if st.session_state.cross_validate else "No")
+            task = "Classification" if st.session_state.preprocessing_info['target_info']['is_classification'] else "Regression"
+            st.metric("Task Type", task)
         
-        # Hyperparameter tuning options
-        st.subheader("⚙️ Hyperparameter Tuning")
-        enable_tuning = st.checkbox(
-            "Enable hyperparameter tuning",
-            value=False,
-            help="This will take longer but may improve model performance"
+        st.divider()
+        
+        # Model Selection
+        st.subheader("🤖 Select Models to Train")
+        
+        # Model category filter
+        categories = ["All"] + list(model_registry.model_categories.keys())
+        selected_category = st.selectbox(
+            "Filter by Model Category",
+            categories,
+            help="Choose a category to filter models or select 'All' to see everything"
         )
         
-        if enable_tuning:
-            tuning_method = st.radio(
-                "Tuning method",
-                ["Grid Search", "Random Search"],
-                horizontal=True
+        # Get available models
+        if selected_category == "All":
+            available_models = model_registry.get_all_models()
+        else:
+            available_models = model_registry.get_models_by_category(selected_category)
+        
+        # Model selection with descriptions
+        st.markdown("**Available Models:**")
+        selected_models = st.multiselect(
+            "Choose one or more models to train and compare",
+            available_models,
+            default=[],
+            help="Select multiple models to compare their performance"
+        )
+        
+        if not selected_models:
+            st.info("👆 Please select at least one model to proceed with training.")
+            return
+        
+        st.success(f"✅ Selected {len(selected_models)} model(s): {', '.join(selected_models)}")
+        
+        st.divider()
+        
+        # Training Configuration
+        st.subheader("⚙️ Training Configuration")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**General Settings:**")
+            cross_validate = st.checkbox(
+                "Enable Cross-Validation",
+                value=True,
+                help="Use k-fold cross-validation for more reliable performance estimates"
             )
-            st.info("💡 Hyperparameter tuning is enabled. This may take significantly longer.")
+            
+            if cross_validate:
+                cv_folds = st.slider(
+                    "Number of CV folds",
+                    3, 10, 5,
+                    help="More folds = more reliable but slower"
+                )
+            else:
+                cv_folds = 5
+            
+            save_models = st.checkbox(
+                "Save trained models",
+                value=True,
+                help="Save models to disk for later use"
+            )
+            
+            random_state = st.number_input(
+                "Random seed",
+                value=42,
+                help="Set seed for reproducible results"
+            )
+        
+        with col2:
+            st.markdown("**Hyperparameter Tuning:**")
+            enable_tuning = st.checkbox(
+                "Enable hyperparameter optimization",
+                value=False,
+                help="Automatically search for best hyperparameters (takes longer)"
+            )
+            
+            if enable_tuning:
+                tuning_method = st.radio(
+                    "Optimization method",
+                    ["Grid Search", "Random Search", "Bayesian Optimization"],
+                    horizontal=True,
+                    help="Grid: exhaustive, Random: faster, Bayesian: most efficient"
+                )
+                
+                n_iterations = st.slider(
+                    "Number of iterations",
+                    10, 100, 20,
+                    help="More iterations = better results but slower"
+                )
+                
+                st.warning("⚠️ Hyperparameter tuning will take significantly longer!")
+        
+        # Model-specific parameters
+        st.divider()
+        st.subheader("🎛️ Model-Specific Parameters")
+        
+        model_params = {}
+        
+        for model_name in selected_models:
+            with st.expander(f"⚙️ {model_name} Parameters", expanded=False):
+                model_params[model_name] = self._get_model_parameters(model_name)
+        
+        # Store settings in session state
+        st.session_state.cross_validate = cross_validate
+        st.session_state.cv_folds = cv_folds
+        st.session_state.save_models = save_models
+        st.session_state.random_state = random_state
+        st.session_state.model_params = model_params
+        
+        st.divider()
         
         # Start training
-        if st.button("🚀 Train Models", type="primary"):
-            self._train_models(selected_models, enable_tuning)
+        col1, col2, col3 = st.columns([2, 1, 2])
+        with col2:
+            if st.button("🚀 Start Training", type="primary", use_container_width=True):
+                self._train_models(selected_models, enable_tuning, model_params)
         
         # Show training status
         if st.session_state.get('model_trained', False):
             st.success("✅ Models trained successfully! Check the Model Evaluation tab.")
     
-    def _train_models(self, selected_models, enable_tuning=False):
-        """Train selected models."""
+    def _get_model_parameters(self, model_name):
+        """Get model-specific parameters interface."""
+        params = {}
+        
+        # Common parameters for different model types
+        if "Random Forest" in model_name or "Extra Trees" in model_name:
+            col1, col2 = st.columns(2)
+            with col1:
+                params['n_estimators'] = st.slider(
+                    "Number of trees",
+                    10, 500, 100, 10,
+                    key=f"{model_name}_n_estimators"
+                )
+                params['max_depth'] = st.slider(
+                    "Max depth",
+                    1, 50, 10,
+                    key=f"{model_name}_max_depth"
+                )
+            with col2:
+                params['min_samples_split'] = st.slider(
+                    "Min samples split",
+                    2, 20, 2,
+                    key=f"{model_name}_min_samples_split"
+                )
+                params['min_samples_leaf'] = st.slider(
+                    "Min samples leaf",
+                    1, 20, 1,
+                    key=f"{model_name}_min_samples_leaf"
+                )
+        
+        elif "XGBoost" in model_name:
+            col1, col2 = st.columns(2)
+            with col1:
+                params['n_estimators'] = st.slider(
+                    "Number of estimators",
+                    10, 500, 100, 10,
+                    key=f"{model_name}_n_estimators"
+                )
+                params['max_depth'] = st.slider(
+                    "Max depth",
+                    1, 15, 6,
+                    key=f"{model_name}_max_depth"
+                )
+                params['learning_rate'] = st.slider(
+                    "Learning rate",
+                    0.01, 1.0, 0.1, 0.01,
+                    key=f"{model_name}_learning_rate"
+                )
+            with col2:
+                params['subsample'] = st.slider(
+                    "Subsample ratio",
+                    0.5, 1.0, 0.8, 0.1,
+                    key=f"{model_name}_subsample"
+                )
+                params['colsample_bytree'] = st.slider(
+                    "Column sample ratio",
+                    0.5, 1.0, 0.8, 0.1,
+                    key=f"{model_name}_colsample"
+                )
+        
+        elif "LightGBM" in model_name or "LGBM" in model_name:
+            col1, col2 = st.columns(2)
+            with col1:
+                params['n_estimators'] = st.slider(
+                    "Number of estimators",
+                    10, 500, 100, 10,
+                    key=f"{model_name}_n_estimators"
+                )
+                params['num_leaves'] = st.slider(
+                    "Number of leaves",
+                    10, 200, 31,
+                    key=f"{model_name}_num_leaves"
+                )
+                params['learning_rate'] = st.slider(
+                    "Learning rate",
+                    0.01, 1.0, 0.1, 0.01,
+                    key=f"{model_name}_learning_rate"
+                )
+            with col2:
+                params['max_depth'] = st.slider(
+                    "Max depth",
+                    -1, 50, -1,
+                    key=f"{model_name}_max_depth",
+                    help="-1 means no limit"
+                )
+                params['min_child_samples'] = st.slider(
+                    "Min child samples",
+                    5, 100, 20,
+                    key=f"{model_name}_min_child_samples"
+                )
+        
+        elif "CatBoost" in model_name:
+            col1, col2 = st.columns(2)
+            with col1:
+                params['iterations'] = st.slider(
+                    "Number of iterations",
+                    10, 500, 100, 10,
+                    key=f"{model_name}_iterations"
+                )
+                params['depth'] = st.slider(
+                    "Depth",
+                    1, 16, 6,
+                    key=f"{model_name}_depth"
+                )
+                params['learning_rate'] = st.slider(
+                    "Learning rate",
+                    0.01, 1.0, 0.1, 0.01,
+                    key=f"{model_name}_learning_rate"
+                )
+            with col2:
+                params['l2_leaf_reg'] = st.slider(
+                    "L2 regularization",
+                    1, 10, 3,
+                    key=f"{model_name}_l2_reg"
+                )
+        
+        elif "SVM" in model_name or "Support Vector" in model_name:
+            col1, col2 = st.columns(2)
+            with col1:
+                params['C'] = st.slider(
+                    "Regularization (C)",
+                    0.01, 10.0, 1.0, 0.1,
+                    key=f"{model_name}_C"
+                )
+                params['kernel'] = st.selectbox(
+                    "Kernel",
+                    ['rbf', 'linear', 'poly', 'sigmoid'],
+                    key=f"{model_name}_kernel"
+                )
+            with col2:
+                if params['kernel'] == 'rbf':
+                    params['gamma'] = st.selectbox(
+                        "Gamma",
+                        ['scale', 'auto'],
+                        key=f"{model_name}_gamma"
+                    )
+        
+        elif "Logistic Regression" in model_name or "Linear Regression" in model_name:
+            col1, col2 = st.columns(2)
+            with col1:
+                if "Logistic" in model_name:
+                    params['C'] = st.slider(
+                        "Regularization (C)",
+                        0.01, 10.0, 1.0, 0.1,
+                        key=f"{model_name}_C"
+                    )
+                    params['penalty'] = st.selectbox(
+                        "Penalty",
+                        ['l2', 'l1', 'elasticnet', 'none'],
+                        key=f"{model_name}_penalty"
+                    )
+            with col2:
+                params['max_iter'] = st.slider(
+                    "Max iterations",
+                    100, 5000, 1000, 100,
+                    key=f"{model_name}_max_iter"
+                )
+        
+        elif "KNN" in model_name or "K-Nearest" in model_name:
+            col1, col2 = st.columns(2)
+            with col1:
+                params['n_neighbors'] = st.slider(
+                    "Number of neighbors",
+                    1, 50, 5,
+                    key=f"{model_name}_n_neighbors"
+                )
+            with col2:
+                params['weights'] = st.selectbox(
+                    "Weights",
+                    ['uniform', 'distance'],
+                    key=f"{model_name}_weights"
+                )
+                params['metric'] = st.selectbox(
+                    "Distance metric",
+                    ['euclidean', 'manhattan', 'minkowski'],
+                    key=f"{model_name}_metric"
+                )
+        
+        elif "Decision Tree" in model_name:
+            col1, col2 = st.columns(2)
+            with col1:
+                params['max_depth'] = st.slider(
+                    "Max depth",
+                    1, 50, 10,
+                    key=f"{model_name}_max_depth"
+                )
+                params['min_samples_split'] = st.slider(
+                    "Min samples split",
+                    2, 20, 2,
+                    key=f"{model_name}_min_samples_split"
+                )
+            with col2:
+                params['min_samples_leaf'] = st.slider(
+                    "Min samples leaf",
+                    1, 20, 1,
+                    key=f"{model_name}_min_samples_leaf"
+                )
+                params['criterion'] = st.selectbox(
+                    "Criterion",
+                    ['gini', 'entropy'] if "Classifier" in model_name else ['mse', 'mae'],
+                    key=f"{model_name}_criterion"
+                )
+        
+        elif "Neural Network" in model_name or "MLP" in model_name:
+            col1, col2 = st.columns(2)
+            with col1:
+                hidden_layers = st.text_input(
+                    "Hidden layers (comma-separated)",
+                    value="100,50",
+                    key=f"{model_name}_hidden_layers",
+                    help="E.g., 100,50 means two layers with 100 and 50 neurons"
+                )
+                params['hidden_layer_sizes'] = tuple([int(x.strip()) for x in hidden_layers.split(',')])
+                params['activation'] = st.selectbox(
+                    "Activation function",
+                    ['relu', 'tanh', 'logistic'],
+                    key=f"{model_name}_activation"
+                )
+            with col2:
+                params['learning_rate'] = st.selectbox(
+                    "Learning rate",
+                    ['constant', 'invscaling', 'adaptive'],
+                    key=f"{model_name}_learning_rate"
+                )
+                params['max_iter'] = st.slider(
+                    "Max iterations",
+                    100, 5000, 200, 100,
+                    key=f"{model_name}_max_iter"
+                )
+        
+        else:
+            st.info(f"Using default parameters for {model_name}")
+        
+        return params
+    
+    def _train_models(self, selected_models, enable_tuning=False, model_params=None):
+        """Train selected models with custom parameters."""
         try:
             X_train = st.session_state.X_train
             X_test = st.session_state.X_test
@@ -604,8 +1394,11 @@ class AccurateApp:
                 try:
                     status_text.text(f"🤖 Training {model_name}... ({i+1}/{len(selected_models)})")
                     
-                    # Train model
-                    model = model_manager.train_model(model_name, X_train, y_train)
+                    # Get custom parameters for this model
+                    custom_params = model_params.get(model_name, {}) if model_params else {}
+                    
+                    # Train model with custom parameters
+                    model = model_manager.train_model(model_name, X_train, y_train, **custom_params)
                     
                     # Evaluate model
                     if is_classification:
